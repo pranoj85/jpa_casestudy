@@ -2,6 +2,7 @@ package com.example.inventory.service;
 
 import com.example.inventory.dto.InventoryDTO;
 import com.example.inventory.dto.OrderCreateEvent;
+import com.example.inventory.dto.OrderLineDTO;
 import com.example.inventory.entity.Inventory;
 import com.example.inventory.repository.InventoryRespistory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,5 +36,13 @@ public class InventoryService {
     @KafkaListener(topics = "order-topic", groupId = "inventory-group")
     private void onOrderCreated(OrderCreateEvent event) {
         System.out.println("Order received : "+ event.getOrderId());
+        // reduce stock
+         for(OrderLineDTO orderLineDTO: event.getLines()) {
+             Inventory inventory = inventoryRespistory.findById(orderLineDTO.getProductId()).orElse(null);
+             System.out.println("inventory product found:"+ inventory.getId() + " quantity:" +  inventory.getQuantity());
+             Long updatedStock = inventory.getQuantity() - orderLineDTO.getQuantity();
+             inventory.setQuantity(updatedStock);
+             inventoryRespistory.save(inventory);
+         }
     }
 }
