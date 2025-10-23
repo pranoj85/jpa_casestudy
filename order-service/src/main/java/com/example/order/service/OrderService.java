@@ -1,5 +1,7 @@
 package com.example.order.service;
 
+import com.example.order.dto.OrderCreateEvent;
+import com.example.order.dto.OrderLineDTO;
 import com.example.order.dto.OrderRequest;
 import com.example.order.entity.Order;
 import com.example.order.entity.OrderLine;
@@ -21,22 +23,35 @@ public class OrderService {
     @Autowired
     public OrderLineRepository orderLineRepository;
 
+    @Autowired
+    public  OrderPublisher orderPublisher;
+
     @Transactional
     public Order placeOrder(OrderRequest orderRequest) {
         List<OrderLine> orderLines =  new ArrayList<>();
-        orderRequest.getOrderLines().forEach(line -> {
-            OrderLine orderLine =  new OrderLine();
-            orderLine.setProductId(line.getProductId());
-            orderLine.setPrice(line.getPrice());
-            orderLine.setQuantity(line.getQuantity());
-        });
+
+        // TODO Check quantity of the product by calling rest api call
+
         Order order = new Order();
         order.setOrderLines(orderLines);
         order.setStatus("CREATED");
         order  = orderRepository.save(order);
 
+        // Set order details
+        for(OrderLineDTO line :orderRequest.getOrderLines() ) {
+            OrderLine orderLine =  new OrderLine();
+            orderLine.setProductId(line.getProductId());
+            orderLine.setPrice(line.getPrice() * line.getQuantity());
+            orderLine.setQuantity(line.getQuantity());
+            orderLine.setOrder(order);
+            orderLineRepository.save(orderLine);
+        };
+
         // Give call to order producer kafka template
-        // TODO
+        OrderCreateEvent orderCreateEvent = new OrderCreateEvent();
+        orderCreateEvent.setOrderId(order.getOrderId());
+        orderCreateEvent.setLines(orderRequest.getOrderLines());
+        orderPublisher.publishOrderCreated(orderCreateEvent);
 
         return order;
     }
