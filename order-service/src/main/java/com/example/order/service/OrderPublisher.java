@@ -12,7 +12,7 @@ public class OrderPublisher {
     private KafkaTemplate<String, Object>  kafkaTemplate;
 
     public void publishOrderCreated(OrderCreateEvent orderCreateEvent) {
-        kafkaTemplate.send("order-created", ""+orderCreateEvent.getOrderId(), orderCreateEvent);
+        kafkaTemplate.send("order-topic", ""+orderCreateEvent.getOrderId(), orderCreateEvent);
         System.out.println("Order published:" + orderCreateEvent.getOrderId());
     }
 }
